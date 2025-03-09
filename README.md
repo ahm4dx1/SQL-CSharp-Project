@@ -130,13 +130,6 @@ Before running the project, make sure you have the following installed:
 
 ---
 
-## License
 
-This project is licensed under the MIT License – see the [LICENSE](LICENSE) file for details.
-```
-
-### **How to Use It:**
-- Simply copy the above content and paste it into a **README.md** file in the root directory of your repository.
-- Modify the placeholders (e.g., `yourusername`) as needed, and feel free to add or adjust sections according to your project's requirements.
 
 Let me know if you'd like any further adjustments or help with anything else! 😊
