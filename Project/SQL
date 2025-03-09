@@ -1,1 +1,128 @@
+CREATE DATABASE project;
+USE project;
+
+-- Table for Genres
+CREATE TABLE Genres (
+    GenreID INT AUTO_INCREMENT PRIMARY KEY, 
+    GenreName VARCHAR(45) NOT NULL UNIQUE CHECK (GenreName REGEXP '^[A-Za-z ]+$')  -- Space added to GenreName
+);
+
+-- Table for Production Companies
+CREATE TABLE ProductionCompanies (
+    ProductionCompanyID INT AUTO_INCREMENT PRIMARY KEY,
+    CompanyName VARCHAR(20) NOT NULL UNIQUE CHECK (CompanyName REGEXP '^[A-Za-z ]+$'), 
+    Country VARCHAR(20) NOT NULL CHECK (Country REGEXP '^[A-Za-z ]+$'),
+    ReleaseYear INT NOT NULL CHECK (ReleaseYear >= 1900 AND ReleaseYear <= 2024),
+    Headquarters VARCHAR(20) CHECK (Headquarters REGEXP '^[A-Za-z ]+$')
+);
+
+-- Table for Producers
+CREATE TABLE Producers (
+    ProducerID INT AUTO_INCREMENT PRIMARY KEY,
+    FullName VARCHAR(50) NOT NULL UNIQUE CHECK (FullName REGEXP '^[A-Za-z ]+$'),  -- Allow spaces in FullName
+    CompanyName VARCHAR(20),
+    FOREIGN KEY (CompanyName) REFERENCES ProductionCompanies(CompanyName) ON DELETE SET NULL
+);
+
+-- Table for Directors
+CREATE TABLE Directors (
+    DirectorID INT AUTO_INCREMENT PRIMARY KEY,
+    FullName VARCHAR(50) NOT NULL UNIQUE CHECK (FullName REGEXP '^[A-Za-z ]+$')  -- Allow spaces in FullName
+);
+
+-- Table for Movies
+CREATE TABLE Movies (
+    MovieID INT AUTO_INCREMENT PRIMARY KEY,
+    Title VARCHAR(20) NOT NULL UNIQUE CHECK (Title REGEXP '^[A-Za-z0-9 ]+$'),  -- Space added to Title
+    ReleaseYear INT NOT NULL CHECK (ReleaseYear >= 1900 AND ReleaseYear <= 2024),
+    GenreName VARCHAR(20),
+    Rating DECIMAL(3, 1) CHECK (Rating BETWEEN 0 AND 10),
+    Runtime INT CHECK (Runtime > 0 AND Runtime <= 360),
+    PlotSummary TEXT,
+    DirectorName VARCHAR(50),  -- Replaced DirectorID with DirectorName
+    ProducerName VARCHAR(50),  -- Replaced ProducerID with ProducerName
+    CompanyName VARCHAR(20),   -- Replaced CompanyID with CompanyName
+    FOREIGN KEY (GenreName) REFERENCES Genres(GenreName) ON DELETE SET NULL,
+    FOREIGN KEY (DirectorName) REFERENCES Directors(FullName) ON DELETE SET NULL,
+    FOREIGN KEY (ProducerName) REFERENCES Producers(FullName) ON DELETE SET NULL,
+    FOREIGN KEY (CompanyName) REFERENCES ProductionCompanies(CompanyName) ON DELETE SET NULL
+);
+
+-- Table for Actors
+CREATE TABLE Actors (
+    ActorID INT AUTO_INCREMENT PRIMARY KEY,
+    FullName VARCHAR(50) NOT NULL UNIQUE CHECK (FullName REGEXP '^[A-Za-z ]+$'),  -- Allow spaces in FullName
+    DateOfBirth DATE NOT NULL,
+    Gender ENUM('Male', 'Female', 'Other') NOT NULL,
+    Nationality VARCHAR(20) CHECK (Nationality REGEXP '^[A-Za-z ]+$'),  -- Space added to Nationality
+    Biography TEXT
+);
+
+-- Trigger for Actors to enforce DateOfBirth rule
+DELIMITER $$
+CREATE TRIGGER trg_check_date_of_birth
+BEFORE INSERT ON Actors
+FOR EACH ROW
+BEGIN
+    IF NEW.DateOfBirth > CURDATE() THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Date of Birth cannot be in the future.';
+    END IF;
+END$$
+DELIMITER $$
+
+DELIMITER $$
+CREATE TRIGGER trg_check_date_of_birth_update
+BEFORE UPDATE ON Actors
+FOR EACH ROW
+BEGIN
+    IF NEW.DateOfBirth > CURDATE() THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Date of Birth cannot be in the future.';
+    END IF;
+END$$
+DELIMITER ;
+
+-- Table for Movie Cast
+CREATE TABLE MovieCast (
+    MovieCastID INT AUTO_INCREMENT PRIMARY KEY,
+    MovieTitle VARCHAR(20) NOT NULL,   -- Changed MovieID to MovieTitle for better clarity
+    ActorFullName VARCHAR(50) NOT NULL,  -- Changed ActorID to ActorFullName
+    Role VARCHAR(20) NOT NULL CHECK (Role REGEXP '^[A-Za-z ]+$'),  -- Space added to Role
+    FOREIGN KEY (MovieTitle) REFERENCES Movies(Title) ON DELETE CASCADE,
+    FOREIGN KEY (ActorFullName) REFERENCES Actors(FullName) ON DELETE CASCADE
+);
+
+-- Table for Users
+CREATE TABLE Users (
+    UserID INT AUTO_INCREMENT PRIMARY KEY,
+    FirstName VARCHAR(20) NOT NULL CHECK (FirstName REGEXP '^[A-Za-z ]+$'),  -- Allow spaces in FirstName
+    LastName VARCHAR(20) NOT NULL CHECK (LastName REGEXP '^[A-Za-z ]+$'),  -- Allow spaces in LastName
+    Username VARCHAR(20) NOT NULL UNIQUE CHECK (CHAR_LENGTH(Username) >= 8 AND Username REGEXP '^[A-Za-z0-9!@#\$%^&*()_+-=]+$'),
+    Email VARCHAR(255) NOT NULL UNIQUE CHECK (Email REGEXP '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'),
+    Password VARCHAR(255) NOT NULL CHECK (CHAR_LENGTH(Password) >= 8 AND Password REGEXP '^[A-Za-z0-9!@#\$%^&*()_+-=]+$'),
+    CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Table for Admins
+CREATE TABLE Admins (
+    AdminID INT AUTO_INCREMENT PRIMARY KEY,
+    FirstName VARCHAR(20) NOT NULL CHECK (FirstName REGEXP '^[A-Za-z ]+$'),  -- Allow spaces in FirstName
+    LastName VARCHAR(20) NOT NULL CHECK (LastName REGEXP '^[A-Za-z ]+$'),  -- Allow spaces in LastName
+    Username VARCHAR(20) NOT NULL UNIQUE CHECK (CHAR_LENGTH(Username) >= 8 AND Username REGEXP '^[A-Za-z0-9!@#\$%^&*()_+-=]+$'),
+    Email VARCHAR(255) NOT NULL UNIQUE CHECK (Email REGEXP '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'),
+    Password VARCHAR(255) NOT NULL CHECK (CHAR_LENGTH(Password) >= 8 AND Password REGEXP '^[A-Za-z0-9!@#\$%^&*()_+-=]+$'),
+    CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Trigger to handle dependent records when deleting a movie
+DELIMITER $$
+CREATE TRIGGER before_movie_delete 
+BEFORE DELETE ON Movies
+FOR EACH ROW 
+BEGIN
+    DELETE FROM MovieCast WHERE MovieTitle = OLD.Title;
+END$$
+DELIMITER ;
+
 
